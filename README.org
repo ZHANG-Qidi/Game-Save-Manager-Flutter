@@ -1,0 +1,20 @@
+* flutter_application_saveload_manager
+
+- Compile command
+  #+begin_src bash
+# Web
+flutter build web --release
+# Output
+build/web/
+
+# Windows
+flutter build windows --release
+# Output
+build/windows/runner/Release/
+
+# Linux
+flutter build linux --release
+# Output
+build/linux/x64/release/bundle/
+  #+end_src
+
