@@ -181,7 +181,6 @@ Future<List<String>> saveListFunc({required String game, required String profile
     }
     final dir = Directory(['SaveLoad', game, profile].join(Platform.pathSeparator));
     var contents = await listDirectoryContents(dir);
-    contents.removeWhere((item) => item.path.contains('SCREENSHOT.png'));
     List<String> contentsString = contents.map((dir) => dir.path).toList();
     contentsString = await saveListFuncRemove(contentsString);
     return contentsString;
@@ -205,10 +204,6 @@ Future<List<String>> saveListFuncRemove(List<String> contentsString) async {
         await File(content).delete();
       } else if (type == FileSystemEntityType.directory) {
         await Directory(content).delete(recursive: true);
-      }
-      final fileScreenshot = File('$content.SCREENSHOT.png');
-      if (await fileScreenshot.exists()) {
-        await fileScreenshot.delete();
       }
     }
   }
@@ -366,10 +361,6 @@ Future<String> saveDelete({
       }
       await file.delete();
       print("Save delete success: ${file.path}");
-    }
-    final fileScreenshot = File(['SaveLoad', game, profile, '$save.SCREENSHOT.png'].join(Platform.pathSeparator));
-    if (await fileScreenshot.exists()) {
-      await fileScreenshot.delete();
     }
     return 'OK';
   } catch (e) {
