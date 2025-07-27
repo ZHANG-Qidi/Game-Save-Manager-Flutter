@@ -156,7 +156,12 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
           appBar: AppBar(
             title: const Text('Save List'),
             centerTitle: true,
-            actions: [_buildRefreshButton(), _buildDeleteButton(saveState)],
+            actions: [
+              _buildRefreshButton(),
+              _buildDeleteButton(saveState),
+              _buildDownloadButton(saveState),
+              _buildUploadButton(saveState),
+            ],
           ),
           body: Column(
             children: [
@@ -338,6 +343,65 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
             );
           },
         );
+      },
+    );
+  }
+
+  Widget _buildDownloadButton(SaveState saveState) {
+    final saveList = saveState.saveList;
+    final saveIndex = saveState.saveIndex;
+    final saveName = saveList.isEmpty ? '' : getFileName(saveList[saveIndex]);
+    if (saveList.isEmpty) {
+      return IconButton(icon: Icon(Icons.download, color: Colors.grey), onPressed: null);
+    }
+    return IconButton(
+      icon: const Icon(Icons.download),
+      onPressed: () async {
+        final gameState = context.read<GameState>();
+        final gameName = getFileName(gameState.gameList[gameState.gameIndex]);
+        final profileState = context.read<ProfileState>();
+        final profileName = getFileName(profileState.profileList[profileState.profileIndex]);
+        final result = await saveDownload(game: gameName, profile: profileName, save: saveName);
+        late String message;
+        if ('NG' == result) {
+          message = 'Download $saveName Failed';
+        } else {
+          message = 'Download $saveName Success';
+        }
+        if (!mounted) return;
+        showTopSnackBar(
+          Overlay.of(context),
+          'NG' == result ? CustomSnackBar.error(message: message) : CustomSnackBar.success(message: message),
+          displayDuration: Duration(milliseconds: 100),
+        );
+      },
+    );
+  }
+
+  Widget _buildUploadButton(SaveState saveState) {
+    return IconButton(
+      icon: const Icon(Icons.upload),
+      onPressed: () async {
+        final gameState = context.read<GameState>();
+        final gameName = getFileName(gameState.gameList[gameState.gameIndex]);
+        final profileState = context.read<ProfileState>();
+        final profileName = getFileName(profileState.profileList[profileState.profileIndex]);
+        final result = await saveUpload(game: gameName, profile: profileName);
+        late String message;
+        if ('NG' == result) {
+          message = 'Upload save to ${[gameName, profileName].join(pathSeparator)} Failed';
+        } else {
+          message = 'Upload save to ${[gameName, profileName].join(pathSeparator)} Sucess';
+        }
+        if (!mounted) return;
+        showTopSnackBar(
+          Overlay.of(context),
+          'NG' == result ? CustomSnackBar.error(message: message) : CustomSnackBar.success(message: message),
+          displayDuration: Duration(milliseconds: 100),
+        );
+        await Future.microtask(() async {
+          await _loadSaveList(savePath: result);
+        });
       },
     );
   }

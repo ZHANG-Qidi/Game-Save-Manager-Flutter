@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:ini/ini.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as path_lib;
+import 'package:archive/archive_io.dart';
+import 'package:file_selector/file_selector.dart';
 import 'saveload_core_common.dart';
 
 Future<void> safeCreateFolder(Directory dir) async {
@@ -11,7 +13,7 @@ Future<void> safeCreateFolder(Directory dir) async {
       return;
     }
     await dir.create(recursive: true);
-    print('New directory success: ${dir.path}');
+    // print('New directory success: ${dir.path}');
   } catch (e) {
     throw Exception('New directory failed: $e');
   }
@@ -240,7 +242,7 @@ Future<String> gameDelete(String game) async {
       throw Exception('Directory does not exist: ${dir.path}');
     }
     await dir.delete(recursive: true);
-    print("Game delete success: ${dir.path}");
+    // print("Game delete success: ${dir.path}");
     return 'OK';
   } catch (e) {
     throw Exception('Game delete error with: $e');
@@ -269,7 +271,7 @@ Future<String> profileDelete({required String game, required String profile}) as
       throw Exception('Directory does not exist: ${dir.path}');
     }
     await dir.delete(recursive: true);
-    print("Profile delete success: ${dir.path}");
+    // print("Profile delete success: ${dir.path}");
     return 'OK';
   } catch (e) {
     throw Exception('Profile delete error with: $e');
@@ -317,7 +319,12 @@ Future<String> saveNew({
       final String strModifiedTimeLast = formatter.format(modifiedTimeLast);
       String targetFile;
       if (comment.isEmpty) {
-        targetFile = ['SaveLoad', game, profile, strModifiedTimeLast + path_lib.extension(saveFile)].join(Platform.pathSeparator);
+        targetFile = [
+          'SaveLoad',
+          game,
+          profile,
+          strModifiedTimeLast + path_lib.extension(saveFile),
+        ].join(Platform.pathSeparator);
       } else {
         targetFile = [
           'SaveLoad',
@@ -357,7 +364,7 @@ Future<String> saveDelete({
         throw Exception('Directory does not exist: ${dir.path}');
       }
       await dir.delete(recursive: true);
-      print("Save delete success: ${dir.path}");
+      // print("Save delete success: ${dir.path}");
     }
     if (saveFile.isNotEmpty) {
       final file = File(savePath);
@@ -365,7 +372,7 @@ Future<String> saveDelete({
         throw Exception('File does not exist: ${file.path}');
       }
       await file.delete();
-      print("Save delete success: ${file.path}");
+      // print("Save delete success: ${file.path}");
     }
     return 'OK';
   } catch (e) {
@@ -392,7 +399,7 @@ Future<String> saveLoad({
         await destPath.delete(recursive: true);
       }
       await copyDirectory(sourcePath, destPath);
-      print("Save load success: ${sourcePath.path}");
+      // print("Save load success: ${sourcePath.path}");
       return 'OK';
     }
     if (saveFile.isNotEmpty) {
@@ -402,7 +409,7 @@ Future<String> saveLoad({
         destPath.delete();
       }
       await sourcePath.copy(destPath.path);
-      print("Save load success: ${sourcePath.path}");
+      // print("Save load success: ${sourcePath.path}");
       return 'OK';
     }
     return 'NG';
@@ -456,4 +463,83 @@ Future<List<String>> getRootDirectory() async {
     return [Platform.environment['HOME'] ?? 'null'];
   }
   return ['null'];
+}
+
+Future<void> compressToZip(String sourcePath, String targetZipPath) async {
+  try {
+    final entityType = FileSystemEntity.typeSync(sourcePath);
+    final encoder = ZipFileEncoder();
+    encoder.create(targetZipPath);
+    if (entityType == FileSystemEntityType.directory) {
+      final inputDir = Directory(sourcePath);
+      if (!inputDir.existsSync()) {
+        throw Exception('The directory does not exist: $sourcePath');
+      }
+      await encoder.addDirectory(inputDir, includeDirName: true);
+    } else if (entityType == FileSystemEntityType.file) {
+      final inputFile = File(sourcePath);
+      if (!inputFile.existsSync()) {
+        throw Exception('The file does not exist: $sourcePath');
+      }
+      await encoder.addFile(inputFile);
+    } else {
+      throw Exception('The path is not a valid file or directory: $sourcePath');
+    }
+    await encoder.close();
+  } catch (e) {
+    throw Exception('Compression failed: $e');
+  }
+}
+
+Future<void> extractZip(String zipFilePath, String destinationPath) async {
+  try {
+    final bytes = await File(zipFilePath).readAsBytes();
+    final archive = ZipDecoder().decodeBytes(bytes);
+    for (final file in archive) {
+      final filename = '$destinationPath${Platform.pathSeparator}${file.name}';
+      if (file.isFile) {
+        final outFile = File(filename)..createSync(recursive: true);
+        await outFile.writeAsBytes(file.content as List<int>);
+      } else {
+        Directory(filename).createSync(recursive: true);
+      }
+    }
+  } catch (e) {
+    throw Exception('Decompression failed: $e');
+  }
+}
+
+Future<String> saveDownload({required String game, required String profile, required String save}) async {
+  try {
+    final savePath = ['SaveLoad', game, profile, save].join(Platform.pathSeparator);
+    final targetFolderPath = ['Download', game, profile].join(Platform.pathSeparator);
+    await safeCreateFolder(Directory(targetFolderPath));
+    final targetPath = [targetFolderPath, '$save.zip'].join(Platform.pathSeparator);
+    await compressToZip(savePath, targetPath);
+    return 'OK';
+  } catch (e) {
+    throw Exception('Save download error with: $e');
+  }
+}
+
+Future<String> saveUpload({required String game, required String profile}) async {
+  try {
+    final XFile? zipFile = await openFile(
+      acceptedTypeGroups: [
+        XTypeGroup(label: 'ZIP Archive', extensions: ['zip']),
+      ],
+    );
+    if (zipFile != null) {
+      final sourcePath = zipFile.path;
+      final targetPath = ['SaveLoad', game, profile].join(Platform.pathSeparator);
+      await extractZip(sourcePath, targetPath);
+      // print('Selected file:  ${zipFile.path}');
+      return 'OK';
+    } else {
+      // print('No files selected');
+      return 'NG';
+    }
+  } catch (e) {
+    throw Expando('Save upload error with: $e');
+  }
 }
