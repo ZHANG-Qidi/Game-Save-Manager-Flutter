@@ -234,7 +234,7 @@ Future<String> saveUpload({required String game, required String profile}) async
     final response = await request.send();
     if (response.statusCode == 200) {
       // print('Upload successful!');
-      return 'OK';
+      return file.name;
     } else {
       // print('Upload failed:${response.statusCode}');
       return 'NG';

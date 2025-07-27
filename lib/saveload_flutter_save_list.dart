@@ -364,9 +364,9 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
         final result = await saveDownload(game: gameName, profile: profileName, save: saveName);
         late String message;
         if ('NG' == result) {
-          message = 'Download $saveName Failed';
+          message = 'Download save from ${[gameName, profileName, saveName].join(pathSeparator)} Failed';
         } else {
-          message = 'Download $saveName Success';
+          message = 'Download save from ${[gameName, profileName, saveName].join(pathSeparator)} Success';
         }
         if (!mounted) return;
         showTopSnackBar(
@@ -391,7 +391,7 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
         if ('NG' == result) {
           message = 'Upload save to ${[gameName, profileName].join(pathSeparator)} Failed';
         } else {
-          message = 'Upload save to ${[gameName, profileName].join(pathSeparator)} Sucess';
+          message = 'Upload save to ${[gameName, profileName, result].join(pathSeparator)} Sucess';
         }
         if (!mounted) return;
         showTopSnackBar(
@@ -497,15 +497,15 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
                   save: saveName,
                 );
                 late String message;
-                if ('OK' == result) {
-                  message = 'Load save to ${saveFolder.isEmpty ? saveFile : saveFolder} Success';
-                } else if ('NG' == result) {
+                if ('NG' == result) {
                   message = 'Load save to ${saveFolder.isEmpty ? saveFile : saveFolder} Failed';
+                } else {
+                  message = 'Load save to ${saveFolder.isEmpty ? saveFile : saveFolder} Success';
                 }
                 if (!mounted) return;
                 showTopSnackBar(
                   Overlay.of(context),
-                  'OK' == result ? CustomSnackBar.success(message: message) : CustomSnackBar.error(message: message),
+                  'NG' == result ? CustomSnackBar.error(message: message) : CustomSnackBar.success(message: message),
                   displayDuration: Duration(milliseconds: 100),
                 );
               },

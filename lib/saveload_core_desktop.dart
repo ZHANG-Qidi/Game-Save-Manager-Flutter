@@ -534,7 +534,7 @@ Future<String> saveUpload({required String game, required String profile}) async
       final targetPath = ['SaveLoad', game, profile].join(Platform.pathSeparator);
       await extractZip(sourcePath, targetPath);
       // print('Selected file:  ${zipFile.path}');
-      return 'OK';
+      return getFileName(sourcePath);
     } else {
       // print('No files selected');
       return 'NG';
