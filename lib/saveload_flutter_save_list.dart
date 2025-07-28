@@ -8,6 +8,11 @@ import 'saveload_flutter_game_list.dart';
 import 'saveload_flutter_profile_list.dart';
 
 class SaveState extends ChangeNotifier {
+  String get save {
+    if (_saveList.isEmpty) return '';
+    return _saveList[_saveIndex];
+  }
+
   int _saveIndex = 0;
   int get saveIndex => _saveIndex;
   void setIndex(int index) {
@@ -49,25 +54,19 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
     super.initState();
     _scrollController = ScrollController();
     _commentController = TextEditingController();
-    _loadSaveList(savePath: 'NG');
+    _loadSaveList(save: 'NG');
   }
 
-  Future<void> _loadSaveList({String savePath = ''}) async {
+  Future<void> _loadSaveList({String save = ''}) async {
     setState(() => _isLoading = true);
     try {
       final saveState = context.read<SaveState>();
       final gameState = context.read<GameState>();
-      final gameList = gameState.gameList;
-      final gameIndex = gameState.gameIndex;
-      final gameName = getFileName(gameList[gameIndex]);
       final profileState = context.read<ProfileState>();
-      final profileList = profileState.profileList;
-      final profileIndex = profileState.profileIndex;
-      final profileName = getFileName(profileList[profileIndex]);
-      final saveList = await saveListFunc(game: gameName, profile: profileName);
+      final saveList = await saveListFunc(game: gameState.game, profile: profileState.profile);
       await Future.microtask(() async {
         saveState.updateList(saveList);
-        await _loadSaveIndex(savePath);
+        await _loadSaveIndex(save);
         _scrollToIndex();
         await _loadComment();
       });
@@ -80,19 +79,18 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
     }
   }
 
-  Future<void> _loadSaveIndex(String savePath) async {
+  Future<void> _loadSaveIndex(String save) async {
     final saveState = context.read<SaveState>();
     final saveList = saveState.saveList;
     final comment = _commentController.text;
     int saveIndex = saveState.saveIndex;
     if (saveList.isEmpty) return;
-    final commentSelected = getComment(saveList[saveIndex]);
-    if ('NG' == savePath) return;
+    if ('NG' == save) return;
     final indexMap = {for (var i = 0; i < saveList.length; i++) saveList[i]: i};
-    if (savePath.isNotEmpty) {
-      saveIndex = indexMap[savePath] ?? -1;
+    if (save.isNotEmpty) {
+      saveIndex = indexMap[save] ?? -1;
       if (-1 == saveIndex) return;
-    } else if (commentSelected == comment) {
+    } else if (getComment(saveState.save) == comment) {
       return;
     } else {
       final saveListFilter = comment.isNotEmpty
@@ -118,12 +116,9 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
 
   Future<void> _loadComment() async {
     final saveState = context.read<SaveState>();
-    final saveList = saveState.saveList;
-    final saveIndex = saveState.saveIndex;
     String comment = '';
-    if (saveList.isNotEmpty) {
-      final saveName = saveList[saveIndex];
-      comment = getComment(saveName);
+    if (saveState.save.isNotEmpty) {
+      comment = getComment(saveState.save);
     }
     _commentController.text = comment;
   }
@@ -199,8 +194,6 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
   }
 
   Widget _buildSaveContainer(SaveState saveState) {
-    final saveIndex = saveState.saveIndex;
-    final saveList = saveState.saveList;
     return Container(
       height: 60,
       decoration: BoxDecoration(
@@ -211,7 +204,7 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Center(
         child: Text(
-          saveList.isEmpty ? 'NO SAVE' : getFileName(saveList[saveIndex]),
+          saveState.save.isEmpty ? 'NO SAVE' : saveState.save,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
           textAlign: TextAlign.center,
           overflow: TextOverflow.ellipsis,
@@ -271,7 +264,7 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     color: isSelected ? Colors.blue : Colors.black,
                   ),
-                  child: Text(getFileName(saveList[index]), textAlign: TextAlign.center),
+                  child: Text(saveList[index], textAlign: TextAlign.center),
                 ),
               ),
             ),
@@ -286,10 +279,8 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
   }
 
   Widget _buildDeleteButton(SaveState saveState) {
-    final saveList = saveState.saveList;
-    final saveIndex = saveState.saveIndex;
-    final saveName = saveList.isEmpty ? '' : getFileName(saveList[saveIndex]);
-    if (saveList.isEmpty) {
+    final saveName = saveState.save;
+    if (saveName.isEmpty) {
       return IconButton(icon: Icon(Icons.delete, color: Colors.grey), onPressed: null);
     }
     return IconButton(
@@ -319,14 +310,12 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
                       Navigator.pop(context);
                       if (!context.mounted) return;
                       final gameState = context.read<GameState>();
-                      final gameName = getFileName(gameState.gameList[gameState.gameIndex]);
                       final profileState = context.read<ProfileState>();
-                      final profileName = getFileName(profileState.profileList[profileState.profileIndex]);
                       final saveFolder = profileState.folder;
                       final saveFile = profileState.file;
                       await saveDelete(
-                        game: gameName,
-                        profile: profileName,
+                        game: gameState.game,
+                        profile: profileState.profile,
                         saveFolder: saveFolder,
                         saveFile: saveFile,
                         save: saveName,
@@ -348,19 +337,17 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
   }
 
   Widget _buildDownloadButton(SaveState saveState) {
-    final saveList = saveState.saveList;
-    final saveIndex = saveState.saveIndex;
-    final saveName = saveList.isEmpty ? '' : getFileName(saveList[saveIndex]);
-    if (saveList.isEmpty) {
+    final saveName = saveState.save;
+    if (saveName.isEmpty) {
       return IconButton(icon: Icon(Icons.download, color: Colors.grey), onPressed: null);
     }
     return IconButton(
       icon: const Icon(Icons.download),
       onPressed: () async {
         final gameState = context.read<GameState>();
-        final gameName = getFileName(gameState.gameList[gameState.gameIndex]);
+        final gameName = gameState.game;
         final profileState = context.read<ProfileState>();
-        final profileName = getFileName(profileState.profileList[profileState.profileIndex]);
+        final profileName = profileState.profile;
         final result = await saveDownload(game: gameName, profile: profileName, save: saveName);
         late String message;
         if ('NG' == result) {
@@ -383,9 +370,9 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
       icon: const Icon(Icons.upload),
       onPressed: () async {
         final gameState = context.read<GameState>();
-        final gameName = getFileName(gameState.gameList[gameState.gameIndex]);
+        final gameName = gameState.game;
         final profileState = context.read<ProfileState>();
-        final profileName = getFileName(profileState.profileList[profileState.profileIndex]);
+        final profileName = profileState.profile;
         final result = await saveUpload(game: gameName, profile: profileName);
         late String message;
         if ('NG' == result) {
@@ -400,7 +387,7 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
           displayDuration: Duration(milliseconds: 100),
         );
         await Future.microtask(() async {
-          await _loadSaveList(savePath: result);
+          await _loadSaveList(save: result);
         });
       },
     );
@@ -428,17 +415,10 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
   }
 
   Widget _buildSaveLoadContainer(SaveState saveState) {
-    final saveList = saveState.saveList;
-    final saveIndex = saveState.saveIndex;
-    final saveName = saveList.isEmpty ? '' : getFileName(saveList[saveIndex]);
     final gameState = context.read<GameState>();
-    final gameList = gameState.gameList;
-    final gameIndex = gameState.gameIndex;
-    final gameName = gameList.isEmpty ? '' : getFileName(gameList[gameIndex]);
+    final gameName = gameState.game;
     final profileState = context.read<ProfileState>();
-    final profileList = profileState.profileList;
-    final profileIndex = profileState.profileIndex;
-    final profileName = profileList.isEmpty ? '' : getFileName(profileList[profileIndex]);
+    final profileName = profileState.profile;
     final saveFolder = profileState.folder;
     final saveFile = profileState.file;
     return SizedBox(
@@ -475,7 +455,7 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
                   displayDuration: Duration(milliseconds: 100),
                 );
                 await Future.microtask(() async {
-                  await _loadSaveList(savePath: result);
+                  await _loadSaveList(save: result);
                 });
               },
             ),
@@ -494,7 +474,7 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
                   profile: profileName,
                   saveFolder: saveFolder,
                   saveFile: saveFile,
-                  save: saveName,
+                  save: saveState.save,
                 );
                 late String message;
                 if ('NG' == result) {

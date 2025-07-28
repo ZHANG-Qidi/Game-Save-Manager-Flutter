@@ -148,18 +148,18 @@ Future<String> pathSeparatorGet() async {
   }
 }
 
-Future<List<String>> listDirectoryFiles(String dirString) async {
+Future<List<String>> listDirectoryFilesNames(String dirString) async {
   try {
-    final responseBody = await fetchJsonRPC('listDirectoryFiles', [dirString]);
+    final responseBody = await fetchJsonRPC('listDirectoryFilesNames', [dirString]);
     return responseBody;
   } catch (e) {
     throw Exception('Error with: $e');
   }
 }
 
-Future<List<String>> listDirectorySubDirectories(String dirString) async {
+Future<List<String>> listDirectorySubDirectoriesNames(String dirString) async {
   try {
-    final responseBody = await fetchJsonRPC('listDirectorySubDirectories', [dirString]);
+    final responseBody = await fetchJsonRPC('listDirectorySubDirectoriesNames', [dirString]);
     return responseBody;
   } catch (e) {
     throw Exception('Error with: $e');
@@ -234,7 +234,7 @@ Future<String> saveUpload({required String game, required String profile}) async
     final response = await request.send();
     if (response.statusCode == 200) {
       // print('Upload successful!');
-      return file.name;
+      return await response.stream.bytesToString();
     } else {
       // print('Upload failed:${response.statusCode}');
       return 'NG';

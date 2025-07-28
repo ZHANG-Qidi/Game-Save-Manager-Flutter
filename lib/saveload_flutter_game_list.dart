@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'saveload_core.dart';
-import 'saveload_core_common.dart';
 import 'saveload_flutter_game_picker.dart';
 import 'saveload_flutter_profile_list.dart';
 
 class GameState extends ChangeNotifier {
+  String get game {
+    if (_gameList.isEmpty) return '';
+    return _gameList[_gameIndex];
+  }
+
   int _gameIndex = 0;
   int get gameIndex => _gameIndex;
   void setIndex(int index) {
@@ -126,8 +130,6 @@ class _GameCenterSelectedListState extends State<GameCenterSelectedList> {
   }
 
   Widget _buildGameContainer(GameState gameState) {
-    final gameIndex = gameState.gameIndex;
-    final gameList = gameState.gameList;
     return Container(
       height: _bottomInfoHeight,
       decoration: BoxDecoration(
@@ -138,7 +140,7 @@ class _GameCenterSelectedListState extends State<GameCenterSelectedList> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Center(
         child: Text(
-          gameList.isEmpty ? 'NO GAME' : getFileName(gameList[gameIndex]),
+          gameState.game.isEmpty ? 'NO GAME' : gameState.game,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
           textAlign: TextAlign.center,
           overflow: TextOverflow.ellipsis,
@@ -175,8 +177,7 @@ class _GameCenterSelectedListState extends State<GameCenterSelectedList> {
             key: ValueKey(gameList[index]),
             onTap: () async {
               gameState.setIndex(index);
-              final gameName = getFileName(gameList[index]);
-              final (profileList, folder, file) = await profileListFunc(gameName);
+              final (profileList, folder, file) = await profileListFunc(gameState.game);
               Future.microtask(() {
                 if (!context.mounted) return;
                 final profileState = context.read<ProfileState>();
@@ -206,7 +207,7 @@ class _GameCenterSelectedListState extends State<GameCenterSelectedList> {
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     color: isSelected ? Colors.blue : Colors.black,
                   ),
-                  child: Text(getFileName(gameList[index]), textAlign: TextAlign.center),
+                  child: Text(gameList[index], textAlign: TextAlign.center),
                 ),
               ),
             ),
@@ -237,10 +238,8 @@ class _GameCenterSelectedListState extends State<GameCenterSelectedList> {
   }
 
   Widget _buildDeleteButton(GameState gameState) {
-    final gameList = gameState.gameList;
-    final gameIndex = gameState.gameIndex;
-    final gameName = gameList.isEmpty ? '' : getFileName(gameList[gameIndex]);
-    if (gameList.isEmpty) {
+    final gameName = gameState.game;
+    if (gameName.isEmpty) {
       return IconButton(icon: Icon(Icons.delete, color: Colors.grey), onPressed: null);
     }
     return IconButton(

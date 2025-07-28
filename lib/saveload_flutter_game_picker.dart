@@ -30,7 +30,7 @@ class _GamePickerState extends State<GamePicker> {
     if (!mounted) return;
     final gameState = context.read<GameState>();
     gameState.updateList(gameList);
-    gameState.setIndex(gameList.indexOf(['SaveLoad', _gameController.text].join(pathSeparator)));
+    gameState.setIndex(gameList.indexOf(_gameController.text));
     Navigator.of(context).pop();
   }
 

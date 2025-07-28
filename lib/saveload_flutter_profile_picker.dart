@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'saveload_core.dart';
-import 'saveload_core_common.dart';
 import 'saveload_flutter_game_list.dart';
 import 'saveload_flutter_profile_list.dart';
 
@@ -20,13 +19,13 @@ class _ProfilePickerState extends State<ProfilePicker> {
     }
     if (!context.mounted) return;
     final gameState = context.read<GameState>();
-    final gameName = getFileName(gameState.gameList[gameState.gameIndex]);
+    final gameName = gameState.game;
     await profileNew(game: gameName, profile: _profileController.text);
     final (profileList, folder, file) = await profileListFunc(gameName);
     if (!mounted) return;
     final profileState = context.read<ProfileState>();
     profileState.updateList(profileList);
-    profileState.setIndex(profileList.indexOf(['SaveLoad', gameName, _profileController.text].join(pathSeparator)));
+    profileState.setIndex(profileList.indexOf(_profileController.text));
     profileState.setFolder(folder);
     profileState.setFile(file);
     Navigator.of(context).pop();

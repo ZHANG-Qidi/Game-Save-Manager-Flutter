@@ -70,6 +70,16 @@ Future<List<String>> listDirectoryFiles(String dirString) async {
   }
 }
 
+Future<List<String>> listDirectoryFilesNames(String dirString) async {
+  try {
+    final fileList = await listDirectoryFiles(dirString);
+    final fileNames = fileList.map((path) => _getFileName(path)).toList();
+    return fileNames;
+  } catch (e) {
+    throw Exception('listDirectoryFilesNames error with: $e');
+  }
+}
+
 Future<List<String>> listDirectorySubDirectories(String dirString) async {
   try {
     final dir = Directory(dirString);
@@ -85,6 +95,16 @@ Future<List<String>> listDirectorySubDirectories(String dirString) async {
     return directories.map((directory) => directory.path).toList();
   } catch (e) {
     throw Exception('Failed to list subdirectories: $e');
+  }
+}
+
+Future<List<String>> listDirectorySubDirectoriesNames(String dirString) async {
+  try {
+    final dirList = await listDirectorySubDirectories(dirString);
+    final dirNames = dirList.map((path) => _getFileName(path)).toList();
+    return dirNames;
+  } catch (e) {
+    throw Expando('listDirectorySubDirectoriesNames error with: $e');
   }
 }
 
@@ -155,8 +175,8 @@ Future<List<String>> gameListFunc() async {
   try {
     final dir = Directory('SaveLoad');
     await safeCreateFolder(dir);
-    final directories = await listDirectorySubDirectories(dir.path);
-    return directories;
+    final saveList = await listDirectorySubDirectoriesNames(dir.path);
+    return saveList;
   } catch (e) {
     throw Exception('Get the list of Games error: $e');
   }
@@ -168,11 +188,11 @@ Future<(List<String>, String, String)> profileListFunc(String game) async {
       return (List<String>.empty(), '', '');
     }
     final dir = Directory(['SaveLoad', game].join(Platform.pathSeparator));
-    final directories = await listDirectorySubDirectories(dir.path);
+    final profileList = await listDirectorySubDirectoriesNames(dir.path);
     final pathIni = await readIniFile(game);
     final String folder = pathIni['folder'];
     final String file = pathIni['file'];
-    return (directories, folder, file);
+    return (profileList, folder, file);
   } catch (e) {
     throw Exception('Get the list of Profiles error: $e');
   }
@@ -187,7 +207,8 @@ Future<List<String>> saveListFunc({required String game, required String profile
     var contents = await listDirectoryContents(dir);
     List<String> contentsString = contents.map((dir) => dir.path).toList();
     contentsString = await saveListFuncRemove(contentsString);
-    return contentsString;
+    final saveList = contentsString.map((path) => _getFileName(path)).toList();
+    return saveList;
   } catch (e) {
     throw Exception('Get the list of sub directory error: $e');
   }
@@ -312,7 +333,7 @@ Future<String> saveNew({
       if (!await destDir.exists()) {
         await copyDirectory(sourceDir, destDir);
       }
-      return targetFolder;
+      return _getFileName(targetFolder);
     }
     if (saveFile.isNotEmpty) {
       modifiedTimeLast = await File(saveFile).lastModified();
@@ -338,7 +359,7 @@ Future<String> saveNew({
       if (!await destFile.exists()) {
         await sourceFile.copy(destFile.path);
       }
-      return targetFile;
+      return _getFileName(targetFile);
     }
     return 'NG';
   } catch (e) {
@@ -491,10 +512,11 @@ Future<void> compressToZip(String sourcePath, String targetZipPath) async {
   }
 }
 
-Future<void> extractZip(String zipFilePath, String destinationPath) async {
+Future<String> extractZip(String zipFilePath, String destinationPath) async {
   try {
     final bytes = await File(zipFilePath).readAsBytes();
     final archive = ZipDecoder().decodeBytes(bytes);
+    final archiveFirstName = archive.first.name;
     for (final file in archive) {
       final filename = '$destinationPath${Platform.pathSeparator}${file.name}';
       if (file.isFile) {
@@ -504,6 +526,7 @@ Future<void> extractZip(String zipFilePath, String destinationPath) async {
         Directory(filename).createSync(recursive: true);
       }
     }
+    return archiveFirstName.split('/').first;
   } catch (e) {
     throw Exception('Decompression failed: $e');
   }
@@ -522,6 +545,10 @@ Future<String> saveDownload({required String game, required String profile, requ
   }
 }
 
+String _getFileName(String path) {
+  return path.split(Platform.pathSeparator).last;
+}
+
 Future<String> saveUpload({required String game, required String profile}) async {
   try {
     final XFile? zipFile = await openFile(
@@ -532,9 +559,9 @@ Future<String> saveUpload({required String game, required String profile}) async
     if (zipFile != null) {
       final sourcePath = zipFile.path;
       final targetPath = ['SaveLoad', game, profile].join(Platform.pathSeparator);
-      await extractZip(sourcePath, targetPath);
+      final save = await extractZip(sourcePath, targetPath);
       // print('Selected file:  ${zipFile.path}');
-      return getFileName(sourcePath);
+      return save;
     } else {
       // print('No files selected');
       return 'NG';

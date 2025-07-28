@@ -36,26 +36,17 @@ class FileSystemState with ChangeNotifier {
   }
 
   PathItem get pathFolder {
-    return PathItem(path: _path, isFolder: true, displayName: getFileName(_path));
+    return PathItem(isFolder: true, displayName: getFileName(_path));
   }
 
   List<PathItem> get folderItems {
-    return _folders
-        .map((folderPath) => PathItem(path: folderPath, isFolder: true, displayName: getFileName(folderPath)))
-        .toList()
+    return _folders.map((folder) => PathItem(isFolder: true, displayName: folder)).toList()
       ..sort((a, b) => a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()));
   }
 
   List<PathItem> get fileItems {
     return _files
-        .map(
-          (filePath) => PathItem(
-            path: filePath,
-            isFolder: false,
-            displayName: getFileName(filePath),
-            fileExtension: getExtension(filePath).toLowerCase(),
-          ),
-        )
+        .map((file) => PathItem(isFolder: false, displayName: file, fileExtension: getExtension(file).toLowerCase()))
         .toList()
       ..sort((a, b) {
         final typeCompare = a.fileExtension.compareTo(b.fileExtension);
@@ -66,11 +57,10 @@ class FileSystemState with ChangeNotifier {
 }
 
 class PathItem {
-  final String path;
   final bool isFolder;
   final String displayName;
   final String fileExtension;
-  PathItem({required this.path, required this.isFolder, required this.displayName, this.fileExtension = ''});
+  PathItem({required this.isFolder, required this.displayName, this.fileExtension = ''});
 }
 
 class FileBrowserDialog extends StatefulWidget {
@@ -82,6 +72,7 @@ class FileBrowserDialog extends StatefulWidget {
 
 class _FileBrowserDialogState extends State<FileBrowserDialog> {
   PathItem? _selectedItem;
+  bool _selectedFlag = false;
   bool showDrivePicker = false;
   List<String> drives = [];
   bool _isLoading = false;
@@ -95,8 +86,8 @@ class _FileBrowserDialogState extends State<FileBrowserDialog> {
     setState(() => _isLoading = true);
     try {
       final fileSystemState = context.read<FileSystemState>();
-      final folders = await listDirectorySubDirectories(path);
-      final files = await listDirectoryFiles(path);
+      final folders = await listDirectorySubDirectoriesNames(path);
+      final files = await listDirectoryFilesNames(path);
       await Future.microtask(() {
         fileSystemState.setPath(path);
         fileSystemState.setFolders(folders);
@@ -106,6 +97,7 @@ class _FileBrowserDialogState extends State<FileBrowserDialog> {
         } else {
           _selectedItem = null;
         }
+        _selectedFlag = false;
       });
     } catch (e) {
       if (mounted) {
@@ -134,7 +126,7 @@ class _FileBrowserDialogState extends State<FileBrowserDialog> {
 
   Future<void> loadFolder(FileSystemState fileSystemState) async {
     setState(() => showDrivePicker = false);
-    final path = _selectedItem!.path;
+    final path = [fileSystemState.path, _selectedItem!.displayName].join(pathSeparator);
     await loadFileSystem(path);
   }
 
@@ -267,9 +259,7 @@ class _FileBrowserDialogState extends State<FileBrowserDialog> {
           child: ElevatedButton.icon(
             icon: const Icon(Icons.open_in_new),
             label: const Text('Open'),
-            onPressed: isOpenEnabled && _selectedItem!.path != fileSystemState.pathFolder.path
-                ? () => loadFolder(fileSystemState)
-                : null,
+            onPressed: isOpenEnabled && _selectedFlag ? () => loadFolder(fileSystemState) : null,
           ),
         ),
       ],
@@ -288,11 +278,15 @@ class _FileBrowserDialogState extends State<FileBrowserDialog> {
             onPressed: isSelectEnabled
                 ? () {
                     if (isOpenEnabled) {
-                      fileSystemState.setFolderSelected(_selectedItem!.path);
+                      fileSystemState.setFolderSelected(
+                        _selectedFlag
+                            ? [fileSystemState.path, _selectedItem!.displayName].join(pathSeparator)
+                            : fileSystemState.path,
+                      );
                       fileSystemState.setFileSelected('');
                     } else {
                       fileSystemState.setFolderSelected('');
-                      fileSystemState.setFileSelected(_selectedItem!.path);
+                      fileSystemState.setFileSelected([fileSystemState.path, _selectedItem!.displayName].join(pathSeparator));
                     }
                     Navigator.of(context).pop();
                   }
@@ -304,20 +298,24 @@ class _FileBrowserDialogState extends State<FileBrowserDialog> {
   }
 
   Widget _buildListItem(BuildContext context, PathItem item, FileSystemState fileSystemState) {
-    final isSelected = _selectedItem != null ? _selectedItem!.path == item.path : false;
+    final isSelected = _selectedFlag
+        ? (_selectedItem != null ? (_selectedItem!.displayName == item.displayName) : false)
+        : false;
     return SmartTapWidget(
       onSingleTap: () async {
         setState(() {
           _selectedItem = item;
+          _selectedFlag = true;
         });
       },
       onDoubleTap: () async {
         _selectedItem = item;
+        _selectedFlag = true;
         if (item.isFolder) {
           await loadFolder(fileSystemState);
         } else if (!widget.isFolderMode && !item.isFolder) {
           fileSystemState.setFolderSelected('');
-          fileSystemState.setFileSelected(_selectedItem!.path);
+          fileSystemState.setFileSelected([fileSystemState.path, _selectedItem!.displayName].join(pathSeparator));
           Navigator.of(context).pop();
         }
       },
@@ -332,7 +330,7 @@ class _FileBrowserDialogState extends State<FileBrowserDialog> {
           boxShadow: isSelected ? [BoxShadow(color: Colors.blue.shade200, blurRadius: 10, spreadRadius: 2)] : null,
         ),
         child: ListTile(
-          leading: item.isFolder ? const Icon(Icons.folder, color: Colors.amber, size: 32) : _getFileIcon(item.path, 32),
+          leading: item.isFolder ? const Icon(Icons.folder, color: Colors.amber, size: 32) : _getFileIcon(item.displayName, 32),
           title: AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 100),
             style: TextStyle(
@@ -347,8 +345,8 @@ class _FileBrowserDialogState extends State<FileBrowserDialog> {
     );
   }
 
-  Icon _getFileIcon(String filePath, double size) {
-    final extension = getExtension(filePath).toLowerCase();
+  Icon _getFileIcon(String file, double size) {
+    final extension = getExtension(file).toLowerCase();
     switch (extension) {
       case '.pdf':
         return Icon(Icons.picture_as_pdf, color: Colors.red, size: size);

@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'saveload_core.dart';
-import 'saveload_core_common.dart';
 import 'saveload_flutter_game_list.dart';
 import 'saveload_flutter_profile_picker.dart';
 
 class ProfileState extends ChangeNotifier {
+  String get profile {
+    if (_profileList.isEmpty) return '';
+    return _profileList[_profileIndex];
+  }
+
   int _profileIndex = 0;
   int get profileIndex => _profileIndex;
   void setIndex(int index) {
@@ -67,10 +71,7 @@ class _ProfileCenterSelectedListState extends State<ProfileCenterSelectedList> {
     try {
       final profileState = context.read<ProfileState>();
       final gameState = context.read<GameState>();
-      final gameList = gameState.gameList;
-      final gameIndex = gameState.gameIndex;
-      final gameName = getFileName(gameList[gameIndex]);
-      final (profileList, folder, file) = await profileListFunc(gameName);
+      final (profileList, folder, file) = await profileListFunc(gameState.game);
       Future.microtask(() {
         profileState.updateList(profileList);
         profileState.setFolder(folder);
@@ -146,8 +147,6 @@ class _ProfileCenterSelectedListState extends State<ProfileCenterSelectedList> {
   }
 
   Widget _buildProfileContainer(ProfileState profileState) {
-    final profileIndex = profileState.profileIndex;
-    final profileList = profileState.profileList;
     return Container(
       height: _bottomInfoHeight,
       decoration: BoxDecoration(
@@ -158,7 +157,7 @@ class _ProfileCenterSelectedListState extends State<ProfileCenterSelectedList> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Center(
         child: Text(
-          profileList.isEmpty ? 'NO PROFILE' : getFileName(profileList[profileIndex]),
+          profileState.profile.isEmpty ? 'NO PROFILE' : profileState.profile,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
           textAlign: TextAlign.center,
           overflow: TextOverflow.ellipsis,
@@ -217,7 +216,7 @@ class _ProfileCenterSelectedListState extends State<ProfileCenterSelectedList> {
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     color: isSelected ? Colors.blue : Colors.black,
                   ),
-                  child: Text(getFileName(profileList[index]), textAlign: TextAlign.center),
+                  child: Text(profileList[index], textAlign: TextAlign.center),
                 ),
               ),
             ),
@@ -247,10 +246,8 @@ class _ProfileCenterSelectedListState extends State<ProfileCenterSelectedList> {
   }
 
   Widget _buildDeleteButton(ProfileState profileState) {
-    final profileIndex = profileState.profileIndex;
-    final profileList = profileState.profileList;
-    final profileName = profileList.isEmpty ? '' : getFileName(profileList[profileIndex]);
-    if (profileList.isEmpty) {
+    final profileName = profileState.profile;
+    if (profileName.isEmpty) {
       return IconButton(icon: Icon(Icons.delete, color: Colors.grey), onPressed: null);
     }
     return IconButton(
@@ -280,8 +277,7 @@ class _ProfileCenterSelectedListState extends State<ProfileCenterSelectedList> {
                       Navigator.pop(context);
                       if (!context.mounted) return;
                       final gameState = context.read<GameState>();
-                      final gameName = getFileName(gameState.gameList[gameState.gameIndex]);
-                      await profileDelete(game: gameName, profile: profileName);
+                      await profileDelete(game: gameState.game, profile: profileName);
                       await _loadProfileList();
                     } catch (e) {
                       if (context.mounted) {
