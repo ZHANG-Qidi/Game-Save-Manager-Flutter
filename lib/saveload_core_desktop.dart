@@ -535,9 +535,7 @@ Future<String> extractZip(String zipFilePath, String destinationPath) async {
 Future<String> saveDownload({required String game, required String profile, required String save}) async {
   try {
     final savePath = ['SaveLoad', game, profile, save].join(Platform.pathSeparator);
-    final targetFolderPath = ['Download', game, profile].join(Platform.pathSeparator);
-    await safeCreateFolder(Directory(targetFolderPath));
-    final targetPath = [targetFolderPath, '$save.zip'].join(Platform.pathSeparator);
+    final targetPath = [game, profile, '$save.zip'].join('_');
     await compressToZip(savePath, targetPath);
     return 'OK';
   } catch (e) {

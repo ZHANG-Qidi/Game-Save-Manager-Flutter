@@ -199,9 +199,18 @@ Future<String> saveDownload({required String game, required String profile, requ
     final body = jsonEncode({'game': game, 'profile': profile, 'save': save});
     final response = await http.post(Uri.parse(url), body: body, headers: {'Content-Type': 'application/json'});
     if (response.statusCode == 200) {
+      final contentDisposition = response.headers['content-disposition'];
+      String? filename;
+      if (contentDisposition != null) {
+        final regex = RegExp(r'filename="(.+)"');
+        final match = regex.firstMatch(contentDisposition);
+        if (match != null) {
+          filename = match.group(1);
+        }
+      }
       final blob = html.Blob([response.bodyBytes], 'application/zip');
       final anchor = html.AnchorElement(href: html.Url.createObjectUrlFromBlob(blob))
-        ..download = '$save.zip'
+        ..download = filename ?? [game, profile, '$save.zip'].join('_')
         ..click();
       Future.delayed(Duration(seconds: 2), () {
         html.Url.revokeObjectUrl(anchor.href!);
