@@ -57,8 +57,9 @@ class _GameCenterSelectedListState extends State<GameCenterSelectedList> {
     try {
       final gameState = context.read<GameState>();
       final gameList = await gameListFunc();
-      Future.microtask(() {
+      Future.microtask(() async {
         gameState.updateList(gameList);
+        await _loadProfileList();
         _scrollToIndex();
       });
     } catch (e) {
@@ -87,6 +88,18 @@ class _GameCenterSelectedListState extends State<GameCenterSelectedList> {
       final double minScroll = _scrollController.position.minScrollExtent;
       final double adjustedPosition = centerPosition.clamp(minScroll, maxScroll);
       _scrollController.animateTo(adjustedPosition, duration: const Duration(milliseconds: 500), curve: Curves.easeOut);
+    });
+  }
+
+  Future<void> _loadProfileList() async {
+    final gameState = context.read<GameState>();
+    final (profileList, folder, file) = await profileListFunc(gameState.game);
+    Future.microtask(() {
+      if (!mounted) return;
+      final profileState = context.read<ProfileState>();
+      profileState.updateList(profileList);
+      profileState.setFolder(folder);
+      profileState.setFile(file);
     });
   }
 
@@ -177,13 +190,8 @@ class _GameCenterSelectedListState extends State<GameCenterSelectedList> {
             key: ValueKey(gameList[index]),
             onTap: () async {
               gameState.setIndex(index);
-              final (profileList, folder, file) = await profileListFunc(gameState.game);
-              Future.microtask(() {
-                if (!context.mounted) return;
-                final profileState = context.read<ProfileState>();
-                profileState.updateList(profileList);
-                profileState.setFolder(folder);
-                profileState.setFile(file);
+              Future.microtask(() async {
+                await _loadProfileList();
                 _scrollToIndex();
               });
             },
