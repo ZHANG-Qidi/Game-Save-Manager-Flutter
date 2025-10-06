@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'saveload_core.dart';
 import 'saveload_flutter_game_picker.dart';
 import 'saveload_flutter_profile_list.dart';
+import 'saveload_core_common.dart';
 
 class GameState extends ChangeNotifier {
   String get game {
@@ -105,8 +106,8 @@ class _GameCenterSelectedListState extends State<GameCenterSelectedList> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<GameState>(
-      builder: (context, gameState, child) {
+    return Consumer2<GameState, ProfileState>(
+      builder: (context, gameState, profileState, child) {
         return Scaffold(
           appBar: AppBar(
             title: const Text('Game List'),
@@ -118,7 +119,7 @@ class _GameCenterSelectedListState extends State<GameCenterSelectedList> {
               Container(height: _itemSizedBoxHeight, color: Colors.blue),
               _isLoading ? Expanded(child: Center(child: CircularProgressIndicator())) : _buildGameListView(gameState),
               Container(height: _itemSizedBoxHeight, color: Colors.blue),
-              _buildGameContainer(gameState),
+              _buildGameContainer(gameState, profileState),
             ],
           ),
           floatingActionButton: gameState.gameList.isEmpty
@@ -142,7 +143,7 @@ class _GameCenterSelectedListState extends State<GameCenterSelectedList> {
     super.dispose();
   }
 
-  Widget _buildGameContainer(GameState gameState) {
+  Widget _buildGameContainer(GameState gameState, ProfileState profileState) {
     return Container(
       height: _bottomInfoHeight,
       decoration: BoxDecoration(
@@ -151,11 +152,18 @@ class _GameCenterSelectedListState extends State<GameCenterSelectedList> {
         boxShadow: [BoxShadow(color: Colors.blue.shade100, blurRadius: 10, spreadRadius: 2)],
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Center(
-        child: Text(
+      child: ListTile(
+        contentPadding: EdgeInsets.zero,
+        title: Text(
           gameState.game.isEmpty ? 'NO GAME' : gameState.game,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
-          textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          profileState.folder.isNotEmpty
+              ? 'Folder: ${mirrorPath(profileState.folder)}'
+              : (profileState.file.isNotEmpty ? 'File: ${mirrorPath(profileState.file)}' : ''),
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
           overflow: TextOverflow.ellipsis,
         ),
       ),
