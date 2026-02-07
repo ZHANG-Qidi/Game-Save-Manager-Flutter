@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'saveload_core.dart';
 import 'saveload_flutter_game_list.dart';
 import 'saveload_flutter_profile_picker.dart';
+import 'saveload_flutter_save_list.dart';
 
 class ProfileState extends ChangeNotifier {
   String get profile {
@@ -76,6 +77,7 @@ class _ProfileCenterSelectedListState extends State<ProfileCenterSelectedList> {
         profileState.updateList(profileList);
         profileState.setFolder(folder);
         profileState.setFile(file);
+        _loadSaveList();
         _scrollToIndex();
       });
     } catch (e) {
@@ -104,6 +106,16 @@ class _ProfileCenterSelectedListState extends State<ProfileCenterSelectedList> {
       final double minScroll = _scrollController.position.minScrollExtent;
       final double adjustedPosition = centerPosition.clamp(minScroll, maxScroll);
       _scrollController.animateTo(adjustedPosition, duration: const Duration(milliseconds: 500), curve: Curves.easeOut);
+    });
+  }
+
+  Future<void> _loadSaveList() async {
+    final saveState = context.read<SaveState>();
+    final gameState = context.read<GameState>();
+    final profileState = context.read<ProfileState>();
+    final saveList = await saveListFunc(game: gameState.game, profile: profileState.profile);
+    await Future.microtask(() async {
+      saveState.updateList(saveList);
     });
   }
 
@@ -192,8 +204,9 @@ class _ProfileCenterSelectedListState extends State<ProfileCenterSelectedList> {
           final bool isSelected = index == profileIndex;
           return GestureDetector(
             key: ValueKey(profileList[index]),
-            onTap: () {
+            onTap: () async {
               profileState.setIndex(index);
+              await _loadSaveList();
               _scrollToIndex();
             },
             child: AnimatedContainer(

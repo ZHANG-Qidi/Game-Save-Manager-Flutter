@@ -43,8 +43,10 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     final gameState = Provider.of<GameState>(context);
     final profileState = Provider.of<ProfileState>(context);
+    final saveState = Provider.of<SaveState>(context);
     final bool gameStateEnabled = gameState.gameList.isNotEmpty;
     final bool profileStateEnabled = profileState.profileList.isNotEmpty;
+    final bool saveStateEnabled = saveState.saveList.isNotEmpty;
     Widget page;
     switch (selectedIndex) {
       case 0:
@@ -68,14 +70,17 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: NavigationRail(
                   extended: constraints.maxWidth >= 600,
                   destinations: [
-                    NavigationRailDestination(icon: Icon(Icons.gamepad), label: Text('Game')),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.gamepad),
+                      label: Text(gameStateEnabled ? gameState.game : 'Game'),
+                    ),
                     NavigationRailDestination(
                       icon: Icon(Icons.account_box, color: gameStateEnabled ? null : Colors.grey),
-                      label: Text('Profile'),
+                      label: Text(profileStateEnabled ? profileState.profile : 'Profile'),
                     ),
                     NavigationRailDestination(
                       icon: Icon(Icons.account_tree, color: (gameStateEnabled && profileStateEnabled) ? null : Colors.grey),
-                      label: Text('Save'),
+                      label: Text(saveStateEnabled ? saveState.save : 'Save'),
                     ),
                   ],
                   selectedIndex: selectedIndex,

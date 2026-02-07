@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'saveload_core.dart';
 import 'saveload_flutter_game_picker.dart';
 import 'saveload_flutter_profile_list.dart';
+import 'saveload_flutter_save_list.dart';
 import 'saveload_core_common.dart';
 
 class GameState extends ChangeNotifier {
@@ -101,6 +102,17 @@ class _GameCenterSelectedListState extends State<GameCenterSelectedList> {
       profileState.updateList(profileList);
       profileState.setFolder(folder);
       profileState.setFile(file);
+      _loadSaveList();
+    });
+  }
+
+  Future<void> _loadSaveList() async {
+    final saveState = context.read<SaveState>();
+    final gameState = context.read<GameState>();
+    final profileState = context.read<ProfileState>();
+    final saveList = await saveListFunc(game: gameState.game, profile: profileState.profile);
+    await Future.microtask(() async {
+      saveState.updateList(saveList);
     });
   }
 
