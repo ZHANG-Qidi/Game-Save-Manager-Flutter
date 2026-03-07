@@ -22,12 +22,17 @@ class ApiConfig {
 Future<dynamic> fetchJsonRPC(String method, [List<dynamic>? params]) async {
   final String url = ApiConfig.rpcEndpoint;
   try {
-    final request = {'jsonrpc': '2.0', 'method': method, 'params': params ?? [], 'id': DateTime.now().millisecondsSinceEpoch};
+    final int requestId = DateTime.now().millisecondsSinceEpoch;
+    final request = {'jsonrpc': '2.0', 'method': method, 'params': params ?? [], 'id': requestId};
     final response = await http.post(Uri.parse(url), headers: {'Content-Type': 'application/json'}, body: json.encode(request));
     if (response.statusCode != 200) {
       throw Exception('HTTP Error: ${response.statusCode}');
     }
     final responseData = json.decode(response.body) as Map<String, dynamic>;
+    final dynamic responseId = responseData['id'];
+    if (responseId != requestId) {
+      throw Exception('RPC ID Mismatch: Request id=$requestId, Response id=$responseId');
+    }
     if (responseData.containsKey('error')) {
       throw Exception('RPC Error: ${responseData['error']['code']} ${responseData['error']['message']}');
     }

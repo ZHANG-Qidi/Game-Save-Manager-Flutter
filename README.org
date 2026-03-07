@@ -4,6 +4,8 @@
   #+begin_src bash
 # Web
 flutter build web --release
+# Tree-shaking can be disabled by providing the --no-tree-shake-icons flag when building your app.
+flutter build web --release --no-tree-shake-icons
 # Output
 build/web/
 
