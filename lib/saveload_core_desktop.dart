@@ -463,27 +463,64 @@ Future<String> getAppDataPath() async {
   return 'null';
 }
 
+// Future<List<String>> getRootDirectory() async {
+//   if (Platform.isWindows) {
+//     List<String> availableDrives = [];
+//     for (int i = 65; i <= 90; i++) {
+//       String driveLetter = String.fromCharCode(i);
+//       String path = '$driveLetter:${Platform.pathSeparator}';
+//       if (await Directory(path).exists()) {
+//         availableDrives.add(path);
+//       }
+//     }
+//     return availableDrives;
+//   } else if (Platform.isMacOS) {
+//     return ['${Platform.environment['HOME']}/Library/Application Support'];
+//   } else if (Platform.isLinux) {
+//     final pathDeck = '${Platform.environment['HOME']}/.local/share/Steam/steamapps/compatdata';
+//     if (await FileSystemEntity.isDirectory(pathDeck)) {
+//       return [pathDeck];
+//     }
+//     return [Platform.environment['HOME'] ?? 'null'];
+//   }
+//   return ['null'];
+// }
+/// Get available root/application directories for different OS
+/// Windows: List of accessible drive letters; macOS: App Support directory; Linux: Steam compat dir (or home dir if not exists)
 Future<List<String>> getRootDirectory() async {
-  if (Platform.isWindows) {
-    List<String> availableDrives = [];
-    for (int i = 65; i <= 90; i++) {
-      String driveLetter = String.fromCharCode(i);
-      String path = '$driveLetter:${Platform.pathSeparator}';
-      if (await Directory(path).exists()) {
-        availableDrives.add(path);
+  try {
+    if (Platform.isWindows) {
+      List<String> availableDrives = [];
+      for (int i = 65; i <= 90; i++) {
+        String driveLetter = String.fromCharCode(i);
+        String path = '$driveLetter:${Platform.pathSeparator}';
+        // Catch single drive access exceptions (e.g. inaccessible network drive), skip and continue
+        try {
+          if (await Directory(path).exists()) {
+            availableDrives.add(path);
+          }
+        } catch (_) {
+          continue;
+        }
       }
+      return availableDrives;
+    } else if (Platform.isMacOS) {
+      final homeDir = Platform.environment['HOME'];
+      return homeDir != null ? ['$homeDir/Library/Application Support'] : [];
+    } else if (Platform.isLinux) {
+      final homeDir = Platform.environment['HOME'];
+      if (homeDir == null) return [];
+      final steamPath = '$homeDir/.local/share/Steam/steamapps/compatdata';
+      if (await FileSystemEntity.isDirectory(steamPath)) {
+        return [steamPath];
+      }
+      return [homeDir];
     }
-    return availableDrives;
-  } else if (Platform.isMacOS) {
-    return ['${Platform.environment['HOME']}/Library/Application Support'];
-  } else if (Platform.isLinux) {
-    final pathDeck = '${Platform.environment['HOME']}/.local/share/Steam/steamapps/compatdata';
-    if (await FileSystemEntity.isDirectory(pathDeck)) {
-      return [pathDeck];
-    }
-    return [Platform.environment['HOME'] ?? 'null'];
+    return [];
+  } catch (e) {
+    print('Error getting root directories: $e');
+    return [];
   }
-  return ['null'];
 }
 
 Future<void> compressToZip(String sourcePath, String targetZipPath) async {
