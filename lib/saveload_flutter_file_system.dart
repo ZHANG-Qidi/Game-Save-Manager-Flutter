@@ -31,8 +31,8 @@ class FileSystemState with ChangeNotifier {
 
   String _fileSelected = '';
   String get fileSelected => _fileSelected;
-  void setFileSelected(String folder) {
-    _fileSelected = folder;
+  void setFileSelected(String file) {
+    _fileSelected = file;
   }
 
   PathItem get pathFolder {
@@ -148,9 +148,10 @@ class _FileBrowserDialogState extends State<FileBrowserDialog> {
   @override
   Widget build(BuildContext context) {
     final fileSystemState = Provider.of<FileSystemState>(context);
-    final items = widget.isFolderMode
-        ? fileSystemState.folderItems
-        : [...fileSystemState.folderItems, ...fileSystemState.fileItems];
+    // final items = widget.isFolderMode
+    //     ? fileSystemState.folderItems
+    //     : [...fileSystemState.folderItems, ...fileSystemState.fileItems];
+    final items = [...fileSystemState.folderItems, ...fileSystemState.fileItems];
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: Scaffold(
