@@ -401,6 +401,50 @@ Future<String> saveDelete({
   }
 }
 
+Future<String> saveRename({
+  required String game,
+  required String profile,
+  required String saveFolder,
+  required String saveFile,
+  required String save,
+  required String name,
+}) async {
+  try {
+    if (game.isEmpty || profile.isEmpty || save.isEmpty) {
+      return 'NG';
+    }
+    final oldPath = ['SaveLoad', game, profile, save].join(Platform.pathSeparator);
+    final newPath = ['SaveLoad', game, profile, name].join(Platform.pathSeparator);
+    if (saveFolder.isNotEmpty) {
+      final oldDir = Directory(oldPath);
+      if (!await oldDir.exists()) {
+        throw Exception('Directory does not exist: ${oldDir.path}');
+      }
+      final newDir = Directory(newPath);
+      if (await newDir.exists()) {
+        throw Exception('New directory already exists: ${newDir.path}');
+      }
+      await oldDir.rename(newPath);
+      // print("Directory rename success: ${oldDir.path} -> $newPath");
+    }
+    if (saveFile.isNotEmpty) {
+      final oldFile = File(oldPath);
+      if (!await oldFile.exists()) {
+        throw Exception('File does not exist: ${oldFile.path}');
+      }
+      final newFile = File(newPath);
+      if (await newFile.exists()) {
+        throw Exception('New file already exists: ${newFile.path}');
+      }
+      await oldFile.rename(newPath);
+      // print("File rename success: ${oldFile.path} -> $newPath");
+    }
+    return 'OK';
+  } catch (e) {
+    throw Exception('Save rename error with: $e');
+  }
+}
+
 Future<String> saveLoad({
   required String game,
   required String profile,

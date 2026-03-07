@@ -12,6 +12,14 @@ String getComment(String path) {
   return path.contains('@') ? (path.split('@').last).split('.').first : '';
 }
 
+String getFileExtension(String path) {
+  return path.contains('.') ? '.${(path.split('.').last)}' : '';
+}
+
+String getPrefix(String path) {
+  return path.contains('@') ? (path.split('@').first) : (path.contains('.') ? path.split('.').first : path);
+}
+
 String? _cachedPathSeparator;
 Future<void> initPathSeparator() async {
   _cachedPathSeparator = await pathSeparatorGet();

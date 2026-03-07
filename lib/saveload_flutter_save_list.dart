@@ -44,6 +44,7 @@ class SaveCenterSelectedList extends StatefulWidget {
 class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
   late final ScrollController _scrollController;
   late final TextEditingController _commentController;
+  late final TextEditingController _renameController;
   final double _itemHeight = 80.0;
   final double _itemMarginHeight = 4.0;
   final double _itemSizedBoxHeight = 2.0;
@@ -54,6 +55,7 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
     super.initState();
     _scrollController = ScrollController();
     _commentController = TextEditingController();
+    _renameController = TextEditingController();
     _loadSaveList(save: 'NG');
   }
 
@@ -156,6 +158,7 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
               _buildDeleteButton(saveState),
               _buildDownloadButton(saveState),
               _buildUploadButton(saveState),
+              _buildRenameButton(saveState),
             ],
           ),
           body: Column(
@@ -190,6 +193,7 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
   void dispose() {
     _scrollController.dispose();
     _commentController.dispose();
+    _renameController.dispose();
     super.dispose();
   }
 
@@ -378,7 +382,7 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
         if ('NG' == result) {
           message = 'Upload save to ${[gameName, profileName].join(pathSeparator)} Failed';
         } else {
-          message = 'Upload save to ${[gameName, profileName, result].join(pathSeparator)} Sucess';
+          message = 'Upload save to ${[gameName, profileName, result].join(pathSeparator)} Success';
         }
         if (!mounted) return;
         showTopSnackBar(
@@ -389,6 +393,121 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
         await Future.microtask(() async {
           await _loadSaveList(save: result);
         });
+      },
+    );
+  }
+
+  bool containsWindowsInvalidChars(String name) {
+    final invalidChars = RegExp(r'[<>:"/\\|?*@]');
+    return invalidChars.hasMatch(name);
+  }
+
+  Widget _buildRenameButton(SaveState saveState) {
+    final saveName = saveState.save;
+    final commentOld = _commentController.text;
+    if (saveName.isEmpty) {
+      return IconButton(icon: Icon(Icons.edit, color: Colors.grey), onPressed: null);
+    }
+    return IconButton(
+      icon: const Icon(Icons.edit),
+      onPressed: () async {
+        showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Rename Save', textAlign: TextAlign.center),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: _renameController..text = commentOld,
+                    decoration: const InputDecoration(labelText: 'Comment', border: OutlineInputBorder()),
+                    textAlign: TextAlign.center,
+                    maxLength: 50,
+                    autofocus: true,
+                  ),
+                ],
+              ),
+              actions: [
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.cancel),
+                  label: const Text('Cancel'),
+                  onPressed: () {
+                    _renameController.clear();
+                    Navigator.pop(context);
+                  },
+                ),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.drive_file_rename_outline),
+                  label: const Text('Rename'),
+                  onPressed: () async {
+                    final commentNew = _renameController.text.trim();
+                    final saveExtension = getFileExtension(saveName);
+                    final savePrefix = getPrefix(saveName);
+                    final newName = '$savePrefix${commentNew.isNotEmpty ? '@$commentNew' : ''}$saveExtension';
+                    if (newName.isEmpty || newName == saveName) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(const SnackBar(content: Text('Please enter a valid new name')));
+                      }
+                      return;
+                    }
+                    if (containsWindowsInvalidChars(commentNew)) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Invalid characters! Windows names cannot contain: < > : " / \\ | ? * @'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                      return;
+                    }
+                    Navigator.pop(context);
+                    if (!context.mounted) return;
+                    try {
+                      final gameState = context.read<GameState>();
+                      final profileState = context.read<ProfileState>();
+                      final saveFolder = profileState.folder;
+                      final saveFile = profileState.file;
+                      final result = await saveRename(
+                        game: gameState.game,
+                        profile: profileState.profile,
+                        saveFolder: saveFolder,
+                        saveFile: saveFile,
+                        save: saveName,
+                        name: newName,
+                      );
+                      await Future.microtask(() async {
+                        await _loadSaveList(save: newName);
+                      });
+                      if (context.mounted) {
+                        late String message;
+                        if ('NG' == result) {
+                          message = 'Renamed $saveName to: $newName Failed';
+                        } else {
+                          message = 'Renamed $saveName to: $newName Success';
+                        }
+                        showTopSnackBar(
+                          Overlay.of(context),
+                          'NG' == result ? CustomSnackBar.error(message: message) : CustomSnackBar.success(message: message),
+                          displayDuration: Duration(milliseconds: 100),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Rename failed: ${e.toString()}')));
+                      }
+                    } finally {
+                      _renameController.clear();
+                    }
+                  },
+                ),
+              ],
+            );
+          },
+        );
       },
     );
   }

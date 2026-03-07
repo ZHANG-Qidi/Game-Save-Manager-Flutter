@@ -124,6 +124,22 @@ Future<String> saveDelete({
   }
 }
 
+Future<String> saveRename({
+  required String game,
+  required String profile,
+  required String saveFolder,
+  required String saveFile,
+  required String save,
+  required String name,
+}) async {
+  try {
+    final responseBody = await fetchJsonRPC('saveRename', [game, profile, saveFolder, saveFile, save, name]);
+    return responseBody;
+  } catch (e) {
+    throw Exception('Error with: $e');
+  }
+}
+
 Future<String> saveLoad({
   required String game,
   required String profile,
