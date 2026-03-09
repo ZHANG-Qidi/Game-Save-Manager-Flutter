@@ -29,10 +29,10 @@ Future<dynamic> fetchJsonRPC(String method, [List<dynamic>? params]) async {
       throw Exception('HTTP Error: ${response.statusCode}');
     }
     final responseData = json.decode(response.body) as Map<String, dynamic>;
-    final dynamic responseId = responseData['id'];
-    if (responseId != requestId) {
-      throw Exception('RPC ID Mismatch: Request id=$requestId, Response id=$responseId');
-    }
+    // final dynamic responseId = responseData['id'];
+    // if (responseId != requestId) {
+    //   throw Exception('RPC ID Mismatch: Request id=$requestId, Response id=$responseId');
+    // }
     if (responseData.containsKey('error')) {
       throw Exception('RPC Error: ${responseData['error']['code']} ${responseData['error']['message']}');
     }
@@ -208,6 +208,30 @@ Future<List<String>> getRootDirectory() async {
 Future<String> gameNew({required String game, String saveFolder = '', String saveFile = ''}) async {
   try {
     final responseBody = await fetchJsonRPC('gameNew', [game, saveFolder, saveFile]);
+    return responseBody;
+  } catch (e) {
+    throw Exception('Error with: $e');
+  }
+}
+
+Future<List<String>> listMdnsServer() async {
+  try {
+    final responseBody = await fetchJsonRPC('listMdnsServer');
+    return responseBody;
+  } catch (e) {
+    throw Exception('Error with: $e');
+  }
+}
+
+Future<String> syncSaveToReceiver({
+  required String game,
+  required String profile,
+  required String save,
+  required String url,
+  required String port,
+}) async {
+  try {
+    final responseBody = await fetchJsonRPC('syncSaveToReceiver', [game, profile, save, url, port]);
     return responseBody;
   } catch (e) {
     throw Exception('Error with: $e');

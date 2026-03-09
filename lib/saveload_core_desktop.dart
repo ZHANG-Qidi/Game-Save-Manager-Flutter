@@ -1,8 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:ini/ini.dart';
 import 'package:intl/intl.dart';
+import 'package:mdns_dart/mdns_dart.dart';
 import 'package:path/path.dart' as path_lib;
 import 'package:archive/archive_io.dart';
+import 'package:http/http.dart' as http;
 import 'package:file_selector/file_selector.dart';
 import 'saveload_core_common.dart';
 
@@ -104,7 +107,7 @@ Future<List<String>> listDirectorySubDirectoriesNames(String dirString) async {
     final dirNames = dirList.map((path) => _getFileName(path)).toList();
     return dirNames;
   } catch (e) {
-    throw Expando('listDirectorySubDirectoriesNames error with: $e');
+    throw Exception('listDirectorySubDirectoriesNames error with: $e');
   }
 }
 
@@ -471,7 +474,7 @@ Future<String> saveLoad({
       final sourcePath = File(savePath);
       final destPath = File(saveFile);
       if (await destPath.exists()) {
-        destPath.delete();
+        await destPath.delete();
       }
       await sourcePath.copy(destPath.path);
       // print("Save load success: ${sourcePath.path}");
@@ -507,28 +510,6 @@ Future<String> getAppDataPath() async {
   return 'null';
 }
 
-// Future<List<String>> getRootDirectory() async {
-//   if (Platform.isWindows) {
-//     List<String> availableDrives = [];
-//     for (int i = 65; i <= 90; i++) {
-//       String driveLetter = String.fromCharCode(i);
-//       String path = '$driveLetter:${Platform.pathSeparator}';
-//       if (await Directory(path).exists()) {
-//         availableDrives.add(path);
-//       }
-//     }
-//     return availableDrives;
-//   } else if (Platform.isMacOS) {
-//     return ['${Platform.environment['HOME']}/Library/Application Support'];
-//   } else if (Platform.isLinux) {
-//     final pathDeck = '${Platform.environment['HOME']}/.local/share/Steam/steamapps/compatdata';
-//     if (await FileSystemEntity.isDirectory(pathDeck)) {
-//       return [pathDeck];
-//     }
-//     return [Platform.environment['HOME'] ?? 'null'];
-//   }
-//   return ['null'];
-// }
 /// Get available root/application directories for different OS
 /// Windows: List of accessible drive letters; macOS: App Support directory; Linux: Steam compat dir (or home dir if not exists)
 Future<List<String>> getRootDirectory() async {
@@ -562,8 +543,7 @@ Future<List<String>> getRootDirectory() async {
     }
     return [];
   } catch (e) {
-    print('Error getting root directories: $e');
-    return [];
+    throw Exception('Error getting root directories: $e');
   }
 }
 
@@ -646,6 +626,105 @@ Future<String> saveUpload({required String game, required String profile}) async
       return 'NG';
     }
   } catch (e) {
-    throw Expando('Save upload error with: $e');
+    throw Exception('Save upload error with: $e');
+  }
+}
+
+Future<List<String>> getLocalIpAddresses() async {
+  final interfaces = await NetworkInterface.list();
+  List<String> localIps = [];
+  for (final interface in interfaces) {
+    for (final addr in interface.addresses) {
+      if (addr.type == InternetAddressType.IPv4) {
+        localIps.add(addr.address);
+      }
+    }
+  }
+  return localIps;
+}
+
+Future<List<ServiceEntry>> mDNSClient() async {
+  // print('\nDiscovering HTTP services...');
+  final localIps = await getLocalIpAddresses();
+  // print('Local IPs to exclude: ${localIps.join(', ')}\n');
+  final results = await MDNSClient.discover('_http._tcp', timeout: Duration(seconds: 3));
+  final filteredResults = results.where((service) {
+    final serviceIp = service.addrV4?.address;
+    return serviceIp == null || !localIps.contains(serviceIp);
+  }).toList();
+  if (filteredResults.isEmpty) {
+    // print('No HTTP services found\n');
+    return [];
+  } else {
+    // print('Found ${filteredResults.length} HTTP service(s):');
+    // for (final service in filteredResults) {
+    //   print('Service: ${service.name}');
+    //   print('  Host: ${service.host}');
+    //   print('  IPv4: ${service.addrV4?.address ?? 'none'}');
+    //   print('  IPv6: ${service.addrV6?.address ?? 'none'}');
+    //   print('  Port: ${service.port}');
+    //   print('  Info: ${service.info}');
+    //   if (service.infoFields.isNotEmpty) {
+    //     print('  TXT: ${service.infoFields.join(', ')}');
+    //   }
+    //   print('');
+    // }
+    return filteredResults;
+  }
+}
+
+Future<List<String>> listMdnsServer() async {
+  try {
+    final mDnsServerList = await mDNSClient();
+    if (mDnsServerList.isEmpty) return [];
+    return mDnsServerList.map((mDnsServer) {
+      final serviceData = {
+        'host': mDnsServer.host,
+        'ipv4': mDnsServer.addrV4?.address ?? 'none',
+        'port': mDnsServer.port,
+        'name': mDnsServer.name,
+      };
+      return jsonEncode(serviceData);
+    }).toList();
+  } catch (e) {
+    throw Exception('Failed to list mDNS Server: $e');
+  }
+}
+
+Future<String> syncSaveToReceiver({
+  required String game,
+  required String profile,
+  required String save,
+  required String url,
+  required String port,
+}) async {
+  String baseUrl = url;
+  if (!url.startsWith(RegExp(r'^http(s)?://'))) baseUrl = 'http://$url';
+  final receiverUploadUrl = '$baseUrl:$port/upload';
+  File? tempZipFile;
+  try {
+    final zipName = [game, profile, '$save.zip'].join('_');
+    final tempDir = Directory.systemTemp;
+    final savePath = ['SaveLoad', game, profile, save].join(Platform.pathSeparator);
+    final String zipPath = [tempDir.path, zipName].join(Platform.pathSeparator);
+    await compressToZip(savePath, zipPath);
+    tempZipFile = File(zipPath);
+    final bytes = await tempZipFile.readAsBytes();
+    final Map<String, dynamic> jsonParams = {'game': game, 'profile': profile};
+    final request = http.MultipartRequest('POST', Uri.parse(receiverUploadUrl))
+      ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: zipName))
+      ..fields['params'] = json.encode(jsonParams);
+    final response = await request.send();
+    if (response.statusCode == 200) {
+      return await response.stream.bytesToString();
+    } else {
+      return 'NG';
+    }
+  } catch (e) {
+    throw Exception('Failed to sync save: $e');
+  } finally {
+    if (tempZipFile != null && await tempZipFile.exists()) {
+      await tempZipFile.delete();
+    }
   }
 }
