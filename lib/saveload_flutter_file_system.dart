@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'saveload_core.dart';
+import 'saveload_core_http.dart';
 import 'saveload_core_common.dart';
 
 class FileSystemState with ChangeNotifier {
