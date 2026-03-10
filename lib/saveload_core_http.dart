@@ -214,16 +214,16 @@ Future<String> gameNew({required String game, String saveFolder = '', String sav
   }
 }
 
-Future<List<String>> listMdnsServer() async {
+Future<List<String>> funcListMdnsServer() async {
   try {
-    final responseBody = await fetchJsonRPC('listMdnsServer');
+    final responseBody = await fetchJsonRPC('funcListMdnsServer');
     return responseBody;
   } catch (e) {
     throw Exception('Error with: $e');
   }
 }
 
-Future<String> syncSaveToReceiver({
+Future<String> handleSync({
   required String game,
   required String profile,
   required String save,
@@ -231,7 +231,7 @@ Future<String> syncSaveToReceiver({
   required String port,
 }) async {
   try {
-    final responseBody = await fetchJsonRPC('syncSaveToReceiver', [game, profile, save, url, port]);
+    final responseBody = await fetchJsonRPC('handleSync', [game, profile, save, url, port]);
     return responseBody;
   } catch (e) {
     throw Exception('Error with: $e');

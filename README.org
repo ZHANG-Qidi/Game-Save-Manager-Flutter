@@ -8,14 +8,4 @@ flutter build web --release
 flutter build web --release --no-tree-shake-icons
 # Output
 build/web/
-
-# Windows
-flutter build windows --release
-# Output
-build/windows/runner/Release/
-
-# Linux
-flutter build linux --release
-# Output
-build/linux/x64/release/bundle/
   #+end_src

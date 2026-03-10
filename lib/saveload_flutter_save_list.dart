@@ -526,7 +526,7 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
           context: context,
           builder: (context) => Center(child: CircularProgressIndicator()),
         );
-        final mDNSServerList = await listMdnsServer();
+        final mDNSServerList = await funcListMdnsServer();
         if (!mounted) return;
         Navigator.pop(context);
         try {
@@ -539,7 +539,7 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
             if (!mounted) return;
             final gameState = context.read<GameState>();
             final profileState = context.read<ProfileState>();
-            final result = await syncSaveToReceiver(
+            final result = await handleSync(
               game: gameState.game,
               profile: profileState.profile,
               save: saveName,
