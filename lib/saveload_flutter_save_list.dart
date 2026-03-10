@@ -4,9 +4,11 @@ import 'package:provider/provider.dart';
 import 'package:top_snackbar_flutter/custom_snack_bar.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import 'saveload_core_http.dart';
+import 'saveload_core_json_rpc.dart';
 import 'saveload_core_common.dart';
 import 'saveload_flutter_game_list.dart';
 import 'saveload_flutter_profile_list.dart';
+import 'saveload_flutter_mdns_list.dart';
 
 class SaveState extends ChangeNotifier {
   String get save {
@@ -444,7 +446,7 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
                   label: const Text('Rename'),
                   onPressed: () async {
                     final commentNew = _renameController.text.trim();
-                    final saveExtension = getFileExtension(saveName);
+                    final saveExtension = getExtension(saveName);
                     final savePrefix = getPrefix(saveName);
                     final newName = '$savePrefix${commentNew.isNotEmpty ? '@$commentNew' : ''}$saveExtension';
                     if (newName.isEmpty || newName == saveName) {
@@ -530,7 +532,7 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
         if (!mounted) return;
         Navigator.pop(context);
         try {
-          final selectedServer = await _showStringListDialog(context: context, stringList: mDNSServerList);
+          final selectedServer = await _showMdnsBrowserDialog(context: context, stringList: mDNSServerList);
           if (selectedServer != null) {
             Map<String, dynamic> jsonMap = jsonDecode(selectedServer);
             final String host = jsonMap['host'] ?? 'Unknown';
@@ -671,199 +673,14 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
   }
 }
 
-class StringListDialog extends StatefulWidget {
-  final List<String> stringList;
-  const StringListDialog({super.key, required this.stringList});
-  @override
-  State<StringListDialog> createState() => _StringListDialogState();
-}
-
-class _StringListDialogState extends State<StringListDialog> {
-  String? _selectedItem;
-  bool _selectedFlag = false;
-  late TextEditingController _textController;
-  @override
-  void initState() {
-    super.initState();
-    _textController = TextEditingController();
-  }
-
-  @override
-  void dispose() {
-    _textController.dispose();
-    super.dispose();
-  }
-
-  void _confirmSelection() {
-    if (_selectedItem != null) {
-      Navigator.of(context).pop(_selectedItem);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: Scaffold(
-        appBar: AppBar(title: Text('Sync Save'), backgroundColor: Theme.of(context).appBarTheme.backgroundColor),
-        body: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            children: [
-              const SizedBox(height: 8),
-              Expanded(
-                child: widget.stringList.isEmpty
-                    ? const Center(child: Text('No Server to display'))
-                    : ListView.builder(
-                        itemCount: widget.stringList.length,
-                        itemBuilder: (context, index) {
-                          final item = widget.stringList[index];
-                          return _buildListItem(context, item);
-                        },
-                      ),
-              ),
-              const SizedBox(height: 8),
-              _buildBottomControls(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildListItem(BuildContext context, String item) {
-    final isSelected = _selectedFlag && _selectedItem == item;
-    Map<String, dynamic> jsonMap = jsonDecode(item);
-    final String host = jsonMap['host'] ?? 'Unknown';
-    final String ipv4 = jsonMap['ipv4'] ?? 'Unknown';
-    final String port = jsonMap['port'] ?? 'Unknown';
-    return SmartTapWidget(
-      onSingleTap: () {
-        setState(() {
-          _selectedItem = item;
-          _selectedFlag = true;
-          _textController.text = '$host ($ipv4:$port)';
-        });
-      },
-      onDoubleTap: () {
-        setState(() {
-          _selectedItem = item;
-          _selectedFlag = true;
-          _textController.text = '$host ($ipv4:$port)';
-        });
-        _confirmSelection();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
-        curve: Curves.easeInOut,
-        margin: const EdgeInsets.symmetric(vertical: 2.0),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.blue.shade50 : Colors.purple.shade100,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isSelected ? Colors.blue : Colors.transparent, width: 2),
-          boxShadow: isSelected ? [BoxShadow(color: Colors.blue.shade200, blurRadius: 10, spreadRadius: 2)] : null,
-        ),
-        child: ListTile(
-          leading: const Icon(Icons.computer, color: Colors.blueGrey, size: 32),
-          title: AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 100),
-            style: TextStyle(
-              fontSize: isSelected ? 18 : 16,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected ? Colors.blue : Colors.black,
-            ),
-            child: Text(host),
-          ),
-          subtitle: Text('$ipv4:$port'),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomControls() {
-    return Column(
-      children: [
-        TextField(
-          decoration: InputDecoration(
-            border: const OutlineInputBorder(),
-            labelText: 'Server',
-            suffixIcon: _selectedItem != null
-                ? IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: () => setState(() {
-                      _selectedItem = null;
-                      _selectedFlag = false;
-                      _textController.clear();
-                    }),
-                  )
-                : null,
-          ),
-          readOnly: true,
-          controller: _textController,
-        ),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                icon: Icon(Icons.sync),
-                label: Text('Sync'),
-                onPressed: _selectedItem != null
-                    ? () {
-                        _confirmSelection();
-                      }
-                    : null,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class SmartTapWidget extends StatefulWidget {
-  final Widget child;
-  final VoidCallback onSingleTap;
-  final VoidCallback onDoubleTap;
-  final Duration doubleTapThreshold;
-  const SmartTapWidget({
-    super.key,
-    required this.child,
-    required this.onSingleTap,
-    required this.onDoubleTap,
-    this.doubleTapThreshold = const Duration(milliseconds: 300),
-  });
-  @override
-  State<SmartTapWidget> createState() => _SmartTapWidgetState();
-}
-
-class _SmartTapWidgetState extends State<SmartTapWidget> {
-  DateTime? _lastTapTime;
-  void _handleTap() {
-    final now = DateTime.now();
-    if (_lastTapTime != null && now.difference(_lastTapTime!) <= widget.doubleTapThreshold) {
-      widget.onDoubleTap();
-    } else {
-      widget.onSingleTap();
-    }
-    _lastTapTime = now;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(behavior: HitTestBehavior.translucent, onTap: _handleTap, child: widget.child);
-  }
-}
-
-Future<String?> _showStringListDialog({required BuildContext context, required List<String> stringList}) async {
+Future<String?> _showMdnsBrowserDialog({required BuildContext context, required List<String> stringList}) async {
   return await showDialog<String>(
     context: context,
     builder: (context) => Dialog(
       insetPadding: const EdgeInsets.all(10),
       child: Container(
         padding: const EdgeInsets.all(10),
-        child: StringListDialog(stringList: stringList),
+        child: MdnsBrowserDialog(stringList: stringList),
       ),
     ),
   );

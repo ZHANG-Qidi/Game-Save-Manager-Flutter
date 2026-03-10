@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'saveload_core_http.dart';
+import 'saveload_core_json_rpc.dart';
 import 'saveload_core_common.dart';
 import 'saveload_flutter_game_list.dart';
 import 'saveload_flutter_file_system.dart';
@@ -106,7 +106,7 @@ class _GamePickerState extends State<GamePicker> {
             icon: const Icon(Icons.folder_open),
             label: const Text('Folder Picker'),
             onPressed: () async {
-              await _showFolderBrowserDialog(context, true);
+              await _showFileBrowserDialog(context, true);
               if (!mounted) return;
               final fileSystemState = context.read<FileSystemState>();
               setState(() {
@@ -121,7 +121,7 @@ class _GamePickerState extends State<GamePicker> {
     );
   }
 
-  Future<void> _showFolderBrowserDialog(BuildContext context, bool isFolderMode) async {
+  Future<void> _showFileBrowserDialog(BuildContext context, bool isFolderMode) async {
     await showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -155,7 +155,7 @@ class _GamePickerState extends State<GamePicker> {
             icon: const Icon(Icons.file_open),
             label: const Text('File Picker'),
             onPressed: () async {
-              await _showFolderBrowserDialog(context, false);
+              await _showFileBrowserDialog(context, false);
               if (!mounted) return;
               final fileSystemState = context.read<FileSystemState>();
               setState(() {

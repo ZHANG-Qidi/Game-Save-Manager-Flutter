@@ -1,4 +1,13 @@
-import 'saveload_core_http.dart';
+import 'saveload_core_json_rpc.dart';
+
+String get pathSeparator {
+  return _cachedPathSeparator!;
+}
+
+String? _cachedPathSeparator;
+Future<void> initPathSeparator() async {
+  _cachedPathSeparator = await pathSeparatorGet();
+}
 
 String mirrorPath(String path) {
   return path.split(pathSeparator).reversed.join(pathSeparator);
@@ -12,21 +21,8 @@ String getComment(String path) {
   return path.contains('@') ? (path.split('@').last).split('.').first : '';
 }
 
-String getFileExtension(String path) {
-  return path.contains('.') ? '.${(path.split('.').last)}' : '';
-}
-
 String getPrefix(String path) {
   return path.contains('@') ? (path.split('@').first) : (path.contains('.') ? path.split('.').first : path);
-}
-
-String? _cachedPathSeparator;
-Future<void> initPathSeparator() async {
-  _cachedPathSeparator = await pathSeparatorGet();
-}
-
-String get pathSeparator {
-  return _cachedPathSeparator!;
 }
 
 String getExtension(String filePath, [int level = 1]) {
