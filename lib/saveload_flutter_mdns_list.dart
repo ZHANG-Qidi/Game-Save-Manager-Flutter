@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'saveload_flutter_common.dart';
 
 class MdnsBrowserDialog extends StatefulWidget {
-  final List<String> stringList;
-  const MdnsBrowserDialog({super.key, required this.stringList});
+  final List<String> mDnsServerList;
+  const MdnsBrowserDialog({super.key, required this.mDnsServerList});
   @override
   State<MdnsBrowserDialog> createState() => _MdnsBrowserDialogState();
 }
@@ -43,12 +43,12 @@ class _MdnsBrowserDialogState extends State<MdnsBrowserDialog> {
             children: [
               const SizedBox(height: 8),
               Expanded(
-                child: widget.stringList.isEmpty
+                child: widget.mDnsServerList.isEmpty
                     ? const Center(child: Text('No Server to display'))
                     : ListView.builder(
-                        itemCount: widget.stringList.length,
+                        itemCount: widget.mDnsServerList.length,
                         itemBuilder: (context, index) {
-                          final item = widget.stringList[index];
+                          final item = widget.mDnsServerList[index];
                           return _buildListItem(context, item);
                         },
                       ),

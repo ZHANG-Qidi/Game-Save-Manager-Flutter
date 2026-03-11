@@ -528,11 +528,11 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
           context: context,
           builder: (context) => Center(child: CircularProgressIndicator()),
         );
-        final mDNSServerList = await funcListMdnsServer();
+        final mDnsServerList = await funcListMdnsServer();
         if (!mounted) return;
         Navigator.pop(context);
         try {
-          final selectedServer = await _showMdnsBrowserDialog(context: context, stringList: mDNSServerList);
+          final selectedServer = await _showMdnsBrowserDialog(context: context, mDnsServerList: mDnsServerList);
           if (selectedServer != null) {
             Map<String, dynamic> jsonMap = jsonDecode(selectedServer);
             final String host = jsonMap['host'] ?? 'Unknown';
@@ -546,7 +546,7 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
               profile: profileState.profile,
               save: saveName,
               url: ipv4,
-              port: port,
+              port: port.toString(),
             );
             late String message;
             if ('NG' == result) {
@@ -673,14 +673,14 @@ class _SaveCenterSelectedListState extends State<SaveCenterSelectedList> {
   }
 }
 
-Future<String?> _showMdnsBrowserDialog({required BuildContext context, required List<String> stringList}) async {
+Future<String?> _showMdnsBrowserDialog({required BuildContext context, required List<String> mDnsServerList}) async {
   return await showDialog<String>(
     context: context,
     builder: (context) => Dialog(
       insetPadding: const EdgeInsets.all(10),
       child: Container(
         padding: const EdgeInsets.all(10),
-        child: MdnsBrowserDialog(stringList: stringList),
+        child: MdnsBrowserDialog(mDnsServerList: mDnsServerList),
       ),
     ),
   );
